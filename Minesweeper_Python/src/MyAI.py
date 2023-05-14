@@ -27,7 +27,7 @@ class MyAI( AI ):
 	def __init__(self, rowDimension, colDimension, totalMines, startX, startY):
 		self._coveredTile = 0 # 2 kinds marked (know there is mine) or unmakred (dont know)
 		self._startX = startX
-		self._startY = startY
+		self._startY = colDimension - 1 - startY
 		self._rowDimension = rowDimension
 		self._colDimension = colDimension
 		self._totalMines = totalMines
