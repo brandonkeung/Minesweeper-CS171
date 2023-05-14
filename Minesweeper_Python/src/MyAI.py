@@ -42,6 +42,7 @@ class MyAI( AI ):
 
 		self._uncover = (False, (-1, -1))
 		self.action_queue = Queue()
+		self._visited = {(startX, startY)}
 		neighbors_coord = self.generate_neighbors(self._startX, self._startY)
 		for i in neighbors_coord:
 			self.action_queue.put(i)
@@ -50,14 +51,28 @@ class MyAI( AI ):
 
 	def getAction(self, number: int) -> "Action Object":
 		print_board(self._board)
+		print("MOVE COUNT:", self._moveCount)
+
 		if self._uncover[0]:
-			row = self._rowDimension- 1 - self._uncover[1][1] 
+			x, y = self._uncover[1]
+
+			row = self._rowDimension- 1 - self._uncover[1][1] #y value
 			self._board[row][self._uncover[1][0]] = number
 			self._uncover = (False, (-1, -1))
 
+			if number == 0:
+				neighbors = self.generate_neighbors(x, y)
+				for i in neighbors:
+					if i not in self._visited:
+						self.action_queue.put(i)
+			# 		if self._board[self._rowDimension - 1 - i[1]][i[0]] == -1:
+					
+
 		if (not self.action_queue.empty()):
+			print(self._visited)
 			# uncover tiles
 			x, y = self.action_queue.get()
+			self._visited.add((x,y))
 			print(f'Currently uncovering {x} and {y}')
 			self._uncover = (True, (x, y))
 			self._moveCount += 1
@@ -67,6 +82,7 @@ class MyAI( AI ):
 		if self._uncovered_tiles == self._safe_spaces:  # we won the game
 			print("win")
 			return Action(AI.Action(LEAVE))
+		print("Leaving...")
 		return Action(AI.Action(LEAVE))
 		
 
