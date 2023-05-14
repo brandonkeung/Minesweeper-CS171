@@ -110,6 +110,10 @@ def main():
 					world = World(filename=f, aiType=aiType, verbose=verbose, debug=debug)
 
 					score = world.run()
+					# if score == 0:
+					# 	with open("fails.txt", "a" ) as fails:
+					# 		fails.write(f)
+					# 		fails.write("\n")
 					if score == 1:
 						scoreBeg += 1
 					elif score == 2:
