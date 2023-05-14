@@ -34,9 +34,43 @@ class MyAI( AI ):
 		self._colDimension = colDimension
 		self._totalMines = totalMines
 		self._moveCount = 0
+
+		self._model = [[['*', None, 8] for _ in range(colDimension)] for _ in range(rowDimension)]
+		# set top and bottom borders to ['*', None, 5]
+		for col_num in range(len(self._model[0])):
+			self._model[0][col_num] = ['*', None, 5]
+		for col_num in range(len(self._model[-1])):
+			self._model[-1][col_num] = ['*', None, 5]
+		# set left and right borders to ['*', None, 5]
+		for row_num in range(len(self._model)):
+			for cell_num in range(len(self._model[row_num])):
+				if (cell_num == 0 or cell_num == len(self._model[row_num]) - 1):
+					self._model[row_num][cell_num] = ['*', None, 5]
+		# set corners to ['*', None, 3]
+		self._model[0][0] = ['*', None, 3]
+		self._model[0][len(self._model[0]) - 1] = ['*', None, 3]
+		self._model[len(self._model) - 1][0] = ['*', None, 3]
+		self._model[len(self._model) - 1][len(self._model[0]) - 1] = ['*', None, 3]
+
+		self._model[rowDimension - 1 - self._startY][self._startX][0] = '0'
+		uncovered_neighbors = self.generate_neighbors(self._startX, self._startY)
+		for x, y in uncovered_neighbors:
+			row = self._rowDimension- 1 - y
+			self._model[row][x][2] = self._model[row][x][2] - 1
+
+		# model definition
+		# first index label
+		# second effective label
+		# third # of adjacent covered/unmarked tiles
+		# * = Covered/Unmarked/Unvisited
+		# M = mine(Covered/Marked)
+		# n = label(Uncovered) or number of mines nearby
+
+		
+
 		
 		self._board = [[-1 for _ in range(colDimension)] for _ in range(rowDimension)]  #board[][]
-		self._board[self._startY][self._startX] = "S"  # leave the x the same but +1 and negate for y since we start at bottom left
+		self._board[self._startY][self._startX] = "0"  
 		
 		self._uncovered_tiles = 0
 		self._safe_spaces = colDimension*rowDimension - totalMines
@@ -47,8 +81,9 @@ class MyAI( AI ):
 		neighbors_coord = self.generate_neighbors(self._startX, self._startY)
 		for i in neighbors_coord:
 			self.action_queue.put(i)
-
-		#print_board(self._board)
+		#print("printing initial model followed by the board")
+		print_model(self._model)
+		print_board(self._board)
 
 	def getAction(self, number: int) -> "Action Object":
 		#print_board(self._board)
@@ -131,11 +166,20 @@ class MyAI( AI ):
 			elif c[1] < 0 or c[1] > self._rowDimension - 1:
 				coords.remove(c)
 
-		#print(coords)
+		#print(f'Neighbors of {x}, {y} are: {coords}')
 		return coords
 
+def print_model(model):
+	print("-----------------")
 	
+	for i in model:
+		print(i)
+	print("-----------------")
+
+	
+
 def print_board(board):
+	print("-----------------")
 	for i in board:
 		print(i)
 	print("-----------------")
