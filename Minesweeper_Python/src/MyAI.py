@@ -27,7 +27,7 @@ class MyAI( AI ):
 	def __init__(self, rowDimension, colDimension, totalMines, startX, startY):
 		self._coveredTile = 0 # 2 kinds marked (know there is mine) or unmakred (dont know)
 		self._startX = startX
-		self._startY = colDimension - 1 - startY
+		self._startY = startY
 		self._rowDimension = rowDimension
 		self._colDimension = colDimension
 		self._totalMines = totalMines
@@ -42,7 +42,8 @@ class MyAI( AI ):
 
 		self._uncover = (False, (-1, -1))
 		self.action_queue = Queue()
-		for i in self.generate_neighbors(self._startX, self._startY):
+		neighbors_coord = self.generate_neighbors(self._startX, self._startY)
+		for i in neighbors_coord:
 			self.action_queue.put(i)
 
 		#print_board(self._board)
@@ -51,23 +52,23 @@ class MyAI( AI ):
 		print_board(self._board)
 		if self._uncover[0]:
 			row = self._rowDimension- 1 - self._uncover[1][1] 
-			self._board[row][self._uncover[2][0]] = number
-			self._uncover = (False, -1, -1)
+			self._board[row][self._uncover[1][0]] = number
+			self._uncover = (False, (-1, -1))
 
 		if (not self.action_queue.empty()):
 			# uncover tiles
 			x, y = self.action_queue.get()
-			print(x + 1, y + 1)
+			print(f'Currently uncovering {x} and {y}')
 			self._uncover = (True, (x, y))
 			self._moveCount += 1
-			return Action(AI.Action(UNCOVER), 2, 2)
+			return Action(AI.Action(1), x, y)
 	
-		#
-		# if self._uncovered_tiles == self._safe_spaces:  # we won the game
-		# 	print("win")
-		# 	return Action(AI.Action(LEAVE))
-		# return Action(AI.Action(LEAVE))
-		#
+		
+		if self._uncovered_tiles == self._safe_spaces:  # we won the game
+			print("win")
+			return Action(AI.Action(LEAVE))
+		return Action(AI.Action(LEAVE))
+		
 
 
 	def generate_neighbors(self, x, y) -> list:
