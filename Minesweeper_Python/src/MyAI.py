@@ -34,7 +34,7 @@ class MyAI( AI ):
 		self._colDimension = colDimension
 		self._totalMines = totalMines
 		self._moveCount = 0
-
+		
 		self._board = [[-1 for _ in range(colDimension)] for _ in range(rowDimension)]  #board[][]
 		self._board[self._startY][self._startX] = "S"  # leave the x the same but +1 and negate for y since we start at bottom left
 		
@@ -87,7 +87,8 @@ class MyAI( AI ):
 			#print(f'Currently uncovering {x} and {y}')
 			self._uncover = (True, (x, y))
 			self._moveCount += 1
-			return Action(AI.Action(1), x, y)
+			self._uncovered_tiles += 1
+			return Action(AI.Action(UNCOVER), x, y)
 		else:
 			#print("in else")
 			for y, row in enumerate(self._board):
