@@ -286,6 +286,9 @@ def print_board(board):
 # run with  python Main.py -f .\Problems\ for all worlds
 # python Main.py -f .\ProblemsBeginner\Beginner_world_1.txt
 
+# in openlab
+# python Main.py -f ./Problems
+
 
 class Tile():
 	def __init__(self, label, effective_label, unvisited_neighbors) -> None:
