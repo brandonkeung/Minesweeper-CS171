@@ -49,70 +49,95 @@ class MyAI( AI ):
 
 		self._uncover = (False, (-1, -1))  # if we uncover, store the coordinates here and set to True
 
-		self.action_queue = Queue()  # queue for keeping trach of uncover events to execute
+		self.actions_to_execute = set()  # set for keeping trach of uncover events to execute
 		neighbors_coord = self.generate_neighbors(self._startX, self._startY)  # generate neighbors of start node
 		for i in neighbors_coord:
-			self.action_queue.put(i)  # add neighbors to queue since everything around our start node is not a bomb
+			self.actions_to_execute.add((i, UNCOVER))  # add neighbors to set since everything around our start node is not a bomb
 
 		# #print("#printing initial model followed by the board")
-		# #print_model(self._model)
+		#print_model(self._model)
 		# #print_board(self._board)
 
 		#model checking variables
-		self._covered_unmarked_frontier = Queue()
-		self._uncovered_frontier = Queue()
+		self._covered_unmarked_frontier = set()  # tiles that are covered but are neighbors of our uncovered frontier
+		self._uncovered_frontier = set()   # tiles that have been uncovered but not solved..
 
 	def getAction(self, number: int) -> "Action Object":
-		##print_board(self._board)
-		###print("MOVE COUNT:", self._moveCount)
-		###print("SIZE OF QUEUE", self.action_queue.qsize())
-		###print("NUM VISITED", len(self._visited))
-
+		print("\nBEFORE ACTION")
+		print(self._uncovered_frontier)
+		print(self.actions_to_execute)
+		print_model(self._model)
+		# print("MOVE COUNT:", self._moveCount)
+		# print("SIZE OF QUEUE", self.action_queue.qsize())
+		# print("NUM VISITED", len(self._visited))
+		
 		if self._uncover[0]:  # if our previous action was uncover, update the board based on 'number'
 			x, y = self._uncover[1]
+			current_tile = self._model[y][x]
+			current_tile.label = number
+			current_tile.effective_label = number
+			self._update_model(x, y, current_tile.label)
 
-			self._model[y][x].label = number
-			self._model[y][x].effective_label = number
-			self._update_model(x, y, 0)
-			#print("NEW TILE UNLOCKED: ", x, y, number)
-			#print(self._moveCount)
-			#print_model(self._model)
+			print("NEW TILE UNLOCKED: ", x, y, number)
+			print_model(self._model)
 			self._uncover = (False, (-1, -1))
 			
-			if number == 0:  # if the number is 0, add the neighbors into the queue since there isn't a bomb around it
+			if current_tile.effective_label == 0:  # if the number is 0, add the neighbors into the queue since there isn't a bomb around it
 				neighbors = self.generate_neighbors(x, y)
 				###print("NEIGHBORS", neighbors)
 				for i in neighbors:
 					###print(i)
 					if self._model[i[1]][i[0]].label == "*":
 						###print("add")
-						self.action_queue.put(i)
+						self.actions_to_execute.add((i, UNCOVER))
+			elif current_tile.effective_label > 0:  # greater than 0 -> add to uncovered_frontier
+				self._uncovered_frontier.add((x, y))
+			
+		if len(self._uncovered_frontier) != 0:
+			for coord in list(self._uncovered_frontier):
+				#print("coord to process", coord)
+				x, y = coord
+				tile = self._model[y][x]
+				if tile.effective_label == 0 and tile.unvisited_neighbors:
+					# should use covered_unmarked frontier instead of generating neighbors lol
+					###########################################
+					neighbors = self.generate_neighbors(x,y)
+					for n in neighbors:
+						if self._model[n[1]][n[0]].label == "*": 
+							self.actions_to_execute.add(((n[0], n[1]), UNCOVER))
+					###########################################
+				elif tile.effective_label == tile.unvisited_neighbors:
+					#print("FOUND BOMBS")
+					self._uncovered_frontier.remove(coord)
+					neighbors = self.generate_neighbors(x, y)
+					for n in neighbors:
+						##print(n)
+						if self._model[n[1]][n[0]].label == "*":  # found bomb(s) so add flag action
+							self.actions_to_execute.add(((n[0], n[1]), FLAG))
 
-		if (not self.action_queue.empty()):   #if our action queue is not empty, uncover
-			# while self._board[y][x] != -1:
-			# 	if self.action_queue.empty():
-			# 		break
-			# 	x, y = self.action_queue.get()
+		if (len(self.actions_to_execute) != 0):   #if our action queue is not empty, uncover
 
-			x, y = self.action_queue.get()   # !DESIGN: could be better in do while loop if that exists in python
-			found = True
-			while self._model[y][x].label != "*":  # find a tile that is unvisited
-				if self.action_queue.empty():
-					found = False
-					break
-				x, y = self.action_queue.get()
-
-			###print(f'Currently uncovering {x} and {y}')
-			if found:
+			coord, action = self.actions_to_execute.pop()
+			x, y = coord
+			if action == UNCOVER:
 				self._uncover = (True, (x, y))
 				self._moveCount += 1
 				self._uncovered_tiles += 1
-
-				# ##print("#printing initial model followed by the board")
-				# #print_model(self._model)
-				# #print_board(self._board)
 				
+				# print("UNCOVER AT: ", x, y)
 				return Action(AI.Action(UNCOVER), x, y)
+			elif action == FLAG:
+				self._moveCount += 1
+				self._uncovered_tiles += 1
+
+				# update board for flag
+				self._model[y][x].label = "M"
+				self._update_model(x, y, "M")
+
+				# print_model(self._model)
+				# print("FLAG ACTION: ", x, y)
+				return Action(AI.Action(FLAG), x, y)
+
 		
 		#print("in else")
 		# if self._covered_unmarked_frontier.empty():  #!DESIGN: this would be better to generate this frontier or set as we perform actions, should also implement the other thing in slides
@@ -132,35 +157,31 @@ class MyAI( AI ):
 		# 	for u in unmarked_neighbors:
 		# 		self._covered_unmarked_frontier.put(u)
 			
-		if self._uncovered_frontier.empty(): #!DESIGN: could be better as a set for easy removal if make this in place
-			for y, row in enumerate(self._model):  
-				for x, tile in enumerate(row):
-					if type(tile.label) is int and tile.unvisited_neighbors > 0:
-						self._uncovered_frontier.put((x,y))				
+		# if len(self._uncovered_frontier) == 0: #!DESIGN: could be better as a set for easy removal if make this in place
+		# 	for y, row in enumerate(self._model):  
+		# 		for x, tile in enumerate(row):
+		# 			if type(tile.label) is int and tile.unvisited_neighbors > 0:
+		# 				self._uncovered_frontier.add((x,y))				
 
-		while not self._uncovered_frontier.empty():
-			##print("IN WHILE")
-			cur_X, cur_Y = self._uncovered_frontier.get()
-			tile = self._model[cur_Y][cur_X]
-			##print(cur_X, cur_Y)
-			#print(tile)
-			if tile.effective_label == 1 and tile.unvisited_neighbors == 1: # we have 1 bomb left and 1 unvsited/unmarked neighbor
-				neighbors = self.generate_neighbors(cur_X,cur_Y)
-				for n in neighbors:
-					##print(n)
-					if self._model[n[1]][n[0]].label == "*":  # found bomb, yay
-						#print_model(self._model)
-						self._model[n[1]][n[0]].label = "M"
-						self._update_model(n[0], n[1], "M")
-						#print_model(self._model)
-						#change this after minimal ai
-						#######################################################
-						bomb_neighbors = self.generate_neighbors(n[0], n[1]) 
-						for b in bomb_neighbors:
-							self.action_queue.put(b)
-						#######################################################
-						self._moveCount += 1
-						return Action(AI.Action(FLAG), n[0], n[1])
+		# while len(self._uncovered_frontier) != 0:
+		# 	##print("IN WHILE")
+		# 	cur_X, cur_Y = self._uncovered_frontier.pop()
+		# 	print("POP", cur_X, cur_Y)
+		# 	tile = self._model[cur_Y][cur_X]
+
+		# 	if tile.effective_label == tile.unvisited_neighbors:
+		# 		neighbors = self.generate_neighbors(cur_X,cur_Y)
+		# 		for n in neighbors:
+		# 			##print(n)
+		# 			if self._model[n[1]][n[0]].label == "*":  # found bomb(s) so add flag action
+		# 				self.actions_to_execute.add(((n[0], n[1]), FLAG))
+
+		# 				self._moveCount += 1
+		# 		break # break out of while loop and execute these actions
+
+
+
+
 
 			# for y, row in enumerate(self._board):
 			# 	found_bomb = True
@@ -186,10 +207,9 @@ class MyAI( AI ):
 			# 					return Action(AI.Action(FLAG), x1, y1)
 							
 		if self._uncovered_tiles == self._safe_spaces:  # we won the game
-			##print("win")
-			#print(self._moveCount)
+			print("Completed Board...")			
 			return Action(AI.Action(LEAVE))
-		##print("Leaving...")
+		print("Leaving...")
 		##print_board(self._board)
 		#print(self._moveCount)
 		return Action(AI.Action(LEAVE))
@@ -251,24 +271,47 @@ class MyAI( AI ):
 
 	def _update_model(self, x, y, tile_label):  # default is -1 for actions that don't return a 'number'
 		neighbors = self.generate_neighbors(x,y)
+		current_tile = self._model[y][x]
 		for n in neighbors:
 			n_X, n_Y = n
-			tile_to_update = self._model[n_Y][n_X]
+			neighbor_tile = self._model[n_Y][n_X]
 
 			# update unmarked neighbor count
-			if tile_to_update.unvisited_neighbors > 0:  
-				tile_to_update.unvisited_neighbors -= 1  
+			if neighbor_tile.unvisited_neighbors > 0:  
+				neighbor_tile.unvisited_neighbors -= 1  
 
 			# update effective label
-			if type(tile_label) is str and type(tile_to_update.effective_label) is int:
-				tile_to_update.effective_label -= 1
+			# if our tile_label is a string then it's a bomb so we subtract from our effective label
+			if type(tile_label) is str and type(neighbor_tile.effective_label) is int:
+				neighbor_tile.effective_label -= 1
+				if neighbor_tile.effective_label == 0 and neighbor_tile.unvisited_neighbors == 0 and (n_X, n_Y) in self._uncovered_frontier: # this tile is now solved so take out of uncovered frontier
+					self._uncovered_frontier.remove((n_X, n_Y))
 			
+			# updates to our current tile
+			# 1. if one of our neighbors is a bomb, then update our effective label
+			if neighbor_tile.label == "M" and current_tile.effective_label:
+				current_tile.effective_label -= 1
+				if current_tile.effective_label == 0 and neighbor_tile.unvisited_neighbors == 0 and (x,y) in self._uncovered_frontier: # this tile is now solved so take out of uncovered frontier
+					self._uncovered_frontier.remove((x,y))
+	
+	def backtracking_search(self):
+		pass
+
+
+	# def check_pattern(self, tile_coord: set) -> list:
+	# 	"""
+	# 	Checks the board for minesweeper patterns and returns actions based on that.
+	# 	"""
+	# 	return list()
 
 def print_model(model):
 	print("-----------------")
-	
 	for i in model:
-		print(i)
+		for tile in i:
+			temp = "{:<13}"
+			print(temp.format(str(tile)), end = '')
+		print()
+
 	print("-----------------")
 
 	
