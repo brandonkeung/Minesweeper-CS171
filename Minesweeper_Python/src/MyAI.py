@@ -16,6 +16,7 @@ from AI import AI
 from Action import Action
 import random
 from queue import Queue
+from datetime import datetime
 
 LEAVE = 0
 UNCOVER = 1
@@ -287,7 +288,7 @@ def print_board(board):
 # python Main.py -f .\ProblemsBeginner\Beginner_world_1.txt
 
 # in openlab
-# python Main.py -f ./Problems
+# python Main.pyc -f ./Problems
 
 
 class Tile():
