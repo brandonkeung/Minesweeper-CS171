@@ -64,13 +64,16 @@ class MyAI( AI ):
 
 	def getAction(self, number: int) -> "Action Object":
 		print("\nBEFORE ACTION")
-		print(self._uncovered_frontier)
+		print(f'Uncovered Frontier: {self._uncovered_frontier}')
+		print(f'Covered Unmarked Frontier: {self._covered_unmarked_frontier}')
 		print(self.actions_to_execute)
 		print_model(self._model)
 		# print("MOVE COUNT:", self._moveCount)
 		# print("SIZE OF QUEUE", self.action_queue.qsize())
 		# print("NUM VISITED", len(self._visited))
 		
+		
+
 		if self._uncover[0]:  # if our previous action was uncover, update the board based on 'number'
 			x, y = self._uncover[1]
 			current_tile = self._model[y][x]
@@ -114,6 +117,19 @@ class MyAI( AI ):
 						##print(n)
 						if self._model[n[1]][n[0]].label == "*":  # found bomb(s) so add flag action
 							self.actions_to_execute.add(((n[0], n[1]), FLAG))
+				else: 
+					for coords in self._uncovered_frontier:
+						x, y = coords
+						# create self._covered_frontier set
+						# iterate over set and add neighbors to set
+						temp_neighbors = self.generate_neighbors(x, y)
+						# remove neighbors that are already uncovered in temp_neighbors
+						temp_neighbors2 = []
+						for x, y in temp_neighbors:
+							if self._model[x][y][0] == '*':
+								temp_neighbors2.append((x, y))
+						self._covered_unmarked_frontier.update(temp_neighbors2)
+
 
 		if (len(self.actions_to_execute) != 0):   #if our action queue is not empty, uncover
 
