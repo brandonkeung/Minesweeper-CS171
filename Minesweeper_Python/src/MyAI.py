@@ -74,6 +74,8 @@ class MyAI( AI ):
 		# print("SIZE OF QUEUE", self.action_queue.qsize())
 		# print("NUM VISITED", len(self._visited))
 		
+		
+
 		if self._uncover[0]:  # if our previous action was uncover, update the board based on 'number'
 			x, y = self._uncover[1]
 			current_tile = self._model[y][x]
