@@ -6,3 +6,4 @@ mkdir Problems
 python3 WorldGenerator.py 1000 Easy_world_ 5 5 1
 
 echo Finished generating worlds!
+python WorldGenerator.py 1000 Intermediate_world_ 16 16 40
