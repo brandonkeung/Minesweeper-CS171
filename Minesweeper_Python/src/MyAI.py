@@ -17,6 +17,7 @@ from Action import Action
 import random
 from queue import Queue
 from datetime import datetime
+from binarytree import tree
 
 LEAVE = 0
 UNCOVER = 1
@@ -266,7 +267,46 @@ class MyAI( AI ):
 				current_tile.effective_label -= 1
 				if current_tile.effective_label == 0 and neighbor_tile.unvisited_neighbors == 0 and (x,y) in self._uncovered_frontier: # this tile is now solved so take out of uncovered frontier
 					self._uncovered_frontier.remove((x,y))
-	
+
+	def backtracking_search2(self) -> list[dict]:
+		# 1. order variables in V (covered_unmarked_frontier)
+		# -----> ordering by num of unvisitied neighbors
+		ordered = list()
+		for coord in self._covered_unmarked_frontier:
+			# get num of neighbors that are in uncovered frontier
+			num = len([i for i in self._uncovered_frontier if is_neighbor(i, coord)])
+			ordered.append((num, coord))
+		ordered_variables = sorted(ordered,key= lambda x:x[0], reverse=True)
+		print("Ordered Variables\n", ordered_variables)
+
+		# To-do: Create a tree with the head being everything none (layer 0)
+		# below assumes nodes are the current states of all nodes that are in contention
+		state = None 
+		# state SHOULD BE CHANGED to a list of all nodes in contention 
+		# all set to none to represent unknown idea of mine or not
+		bTTree = Node2(state)
+		# REMEMBER: when we set a node as a left or right child, we must also set the root node to be able to
+		# go back up the tree
+		for square in ordered:
+			# start creating the tree and backtrack on it at the same time
+			# create a state where the first node is a mine check if its possible if not able to 
+			# figure out yet, assume the next node is bomb etc. if it is NOT possible, go to parent and go right
+			# meaning assume NOT bomb and continue. If we reach a state that works, find all 
+			# other versions that work
+			# ALSO MAY NEED to keep a list of all states that don't work so we don't iterate over states that we 
+			# know won't work
+			pass
+
+		# root.left = ordered[0] is a mine (layer 1)
+		# root.right  = ordered[0] is NOT a mine (layer 1)
+		# root.left.left = ordered[0] and ordered[1] are BOTH a mine (layer 2)
+
+		constraints = {i: self._model[i[1]][i[0]].copy() for i in self._uncovered_frontier}
+		variables = {i: self._model[i[1]][i[0]].copy() for i in self._covered_unmarked_frontier}
+
+		print("constraints\n", constraints)
+		print("variables\n", variables)
+
 	def backtracking_search(self) -> list[dict]:
 		# 1. order variables in V (covered_unmarked_frontier)
 		# -----> ordering by num of unvisitied neighbors
@@ -531,6 +571,14 @@ class Node:
 		self.value = value
 		self.next = None
 		self.prev = None
+
+class Node2:
+
+    def __init__(self, value, root = None, left=None, right=None):
+        self.value = value  # The node value (float/int/str)
+        self.left = left    # Left child
+        self.right = right  # Right child
+		self.root = root # Parent
 
 class LinkedList:
     def __init__(self):
