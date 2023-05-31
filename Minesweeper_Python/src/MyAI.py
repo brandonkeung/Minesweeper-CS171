@@ -138,10 +138,19 @@ class MyAI( AI ):
 					self.check_pattern(coord)
 					# check patters
 					# check model
-		if len(self.actions_to_execute) == 0:
+		poop = True
+		if len(self.actions_to_execute) == 0 and self._uncovered_tiles != self._safe_spaces and poop:
 			#backtrack
+			poop = False
 			print("BACKTRACK")
-			self.backtracking_search()
+			potential_assignments = self.backtracking_search()
+			print("potential assignments\n", potential_assignments)
+			# TO IMPLEMENT: get best moves based on backtracking search
+			# for coord, tile in potential_assignments[0].items():
+			# 	if tile.label == "M":
+			# 		self.actions_to_execute.add((coord, FLAG))
+			# 	else:
+			# 		self.actions_to_execute.add((coord, UNCOVER))
 
 		if (len(self.actions_to_execute) != 0):   #if our action queue is not empty, do actions
 
@@ -254,7 +263,7 @@ class MyAI( AI ):
 				if current_tile.effective_label == 0 and neighbor_tile.unvisited_neighbors == 0 and (x,y) in self._uncovered_frontier: # this tile is now solved so take out of uncovered frontier
 					self._uncovered_frontier.remove((x,y))
 	
-	def backtracking_search(self):
+	def backtracking_search(self) -> list[dict]:
 		# 1. order variables in V (covered_unmarked_frontier)
 		# -----> ordering by num of unvisitied neighbors
 		ordered = list()
@@ -265,40 +274,102 @@ class MyAI( AI ):
 
 		ordered_variables = sorted(ordered,key= lambda x:x[0], reverse=True)
 		print("Ordered Variables\n", ordered_variables)
+		ordered_ll = create_assignment_LL(ordered_variables)
 		constraints = {i: self._model[i[1]][i[0]].copy() for i in self._uncovered_frontier}
 		variables = {i: self._model[i[1]][i[0]].copy() for i in self._covered_unmarked_frontier}
 
-		print("constaints\n", constraints)
+		print("constraints\n", constraints)
 		print("variables\n", variables)
 		
-		full_complete_assignments = list()
-		for covered in ordered_variables:
-			variables[covered].label = "M"
-			is_valid, updated_dict = self._check_update_constraints(covered, variables)
-			if is_valid:
-				variables = updated_dict
-			else:
-				variables[covered].label = "No Mine"
-			# check if neighbors veer it to bomb or no bomb, if not we assume it's a bomb
+		current_var = ordered_ll.head
+		constraints_copy = {i: constraints[i].copy() for i in constraints}
 
-	def _check_update_constraints(self, changed_coord, constraint_dict:dict) -> tuple:
+		full_complete_assignments = list()
+		while True:
+			print("VAR CURRENTLY ON:", current_var.key, current_var.value)
+			if current_var.value == None:
+				current_var.value = {"Mine"}
+				variables[current_var.key].label = "M"
+				is_valid, updated_constraints = self._check_update_constraints(current_var.key, constraints_copy, variables)
+				print(constraints_copy)
+				if is_valid:
+					constraints_copy = updated_constraints
+					print(current_var.key, "is a Mine")
+					print("\tupdated constraints\n\t", constraints_copy)
+					if current_var.next:
+						current_var = current_var.next
+					#print(current_var.key, "is a Mine")
+					#continue
+				else:
+					variables[current_var.key].label = "*"
+				continue
+			if len(current_var.value) == 1:
+				#print(current_var.value)
+				current_var.value.add("Not Mine")
+				variables[current_var.key].label = "Not Mine"
+				is_valid, updated_constraints = self._check_update_constraints(current_var.key, constraints_copy, variables)
+				if is_valid:
+					constraints_copy = updated_constraints
+					print(current_var.key, "is not a mine")
+					print("\tupdated constraints\n\t", constraints_copy)
+					if current_var.next:
+						current_var = current_var.next
+					#print(current_var.key, "is not a mine")
+					#continue
+				else:
+					variables[current_var.key].label = "*"
+				continue
+			if current_var.next == None and variables[current_var.key].label != "*": # this means we've reached a complete assignment
+				full_complete_assignments.append(variables)
+				# TO IMPLEMENT: initiate backtrack to get all potetial assignments
+				
+			#backtrack
+			current_var.value = None
+			past_label = variables[current_var.key].label
+			variables[current_var.key].label = "*"
+			for c, c_tile in constraints_copy.items():
+				if is_neighbor(c, current_var.key):
+					if past_label == "M":
+						c_tile.effective_label += 1
+					c_tile.unvisited_neighbors += 1
+			
+			current_var = current_var.prev
+			print("BACKTRACKED VAL", current_var.key)
+			print(variables)
+			print(constraints_copy)
+			print("stopped")
+			break
+
+		return full_complete_assignments
+		# for covered in ordered_variables:
+		# 	variables[covered].label = "M"
+		# 	is_valid, updated_dict = self._check_update_constraints(covered, constraints, variables)
+		# 	if is_valid:
+		# 		variables = updated_dict
+		# 	else:
+		# 		variables[covered].label = "No Mine"
+
+
+	def _check_update_constraints(self, changed_coord, constraint_dict:dict, variable_dict: dict) -> tuple:
 		"""
 		Based on a potential assignment, will check if the constraints are satisfied.
-		Returns a tuple that contains (boolean, updated onstraint_dict)
+		Returns a tuple that contains (boolean, updated constraint_dict)
 		"""
-		changed_label = constraint_dict[changed_coord].label
-		if changed_label == "M":
-			for coord in constraint_dict.keys():
-			#check constraints
-				if self.is_neighbor(coord, changed_coord):
-					t = constraint_dict[coord]
-					if t.unvisited_neigbhors == 0 or t.effective_label == 0:
-						return (False, dict())
-					
-					# passes constrains so update
-					t.effective_label -= 1
-					t.unvisited_neigbhors -= 1
+		constraint_dict = {i: constraint_dict[i].copy() for i in constraint_dict}
+		changed_label = variable_dict[changed_coord].label
 
+		for coord in constraint_dict.keys():
+		#check constraints
+			if is_neighbor(coord, changed_coord):
+				t = constraint_dict[coord]
+				if t.unvisited_neighbors == 0 or (changed_label == "M" and t.effective_label == 0):# or t.effective_label == 0:
+					return (False, dict())
+				
+				# passes constrains so update
+				if changed_label == "M":
+					t.effective_label -= 1
+				t.unvisited_neighbors -= 1
+	#	print("\tupdated constraints", constraint_dict)
 		return (True, constraint_dict)
 
 	def _update_neighbors(self, changed_coord, constraint_dict):
@@ -433,3 +504,35 @@ class Tile():
 
 	def copy(self) -> 'Tile':
 		return Tile(self.label, self.effective_label, self.unvisited_neighbors)
+	
+class Node:
+	def __init__(self, key:tuple, value=None):
+		self.key = key
+		self.value = value
+		self.next = None
+		self.prev = None
+
+class LinkedList:
+    def __init__(self):
+        self.head = None
+	
+def printLL(ll):
+	temp = ll.head
+	while temp:
+		print(temp.key, end=' ')
+		temp = temp.next
+	print()
+def create_assignment_LL(ordered: list) -> LinkedList:
+	result = LinkedList()
+	temp = None
+	for pair in ordered:
+		if temp == None:
+			result.head = Node(pair[1])
+			temp = result.head
+		else:
+			temp.next = Node(pair[1])
+			temp.next.prev = temp
+			temp = temp.next
+		
+	printLL(result)
+	return result
