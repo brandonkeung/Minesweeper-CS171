@@ -17,6 +17,7 @@ from Action import Action
 import random
 from queue import Queue
 from datetime import datetime
+from collections import defaultdict
 
 LEAVE = 0
 UNCOVER = 1
@@ -28,8 +29,9 @@ UNFLAG = 3
 class MyAI( AI ):
 
 	def __init__(self, rowDimension, colDimension, totalMines, startX, startY):
-		##print(startX, startY, rowDimension, colDimension, totalMines)
+		### print(startX, startY, rowDimension, colDimension, totalMines)
 
+		self.poop = True
 		self._coveredTile = 0 # 2 kinds marked (know there is mine) or unmakred (dont know)
 		self._startX = startX
 		self._startY = startY
@@ -55,7 +57,7 @@ class MyAI( AI ):
 			self.actions_to_execute.add((i, UNCOVER))  # add neighbors to set since everything around our start node is not a bomb
 		# self.actions_to_execute.add(((3, 4), UNCOVER))
 		# self.actions_to_execute.add(((2, 5), UNCOVER))
-		# #print("#printing initial model followed by the board")
+		# ## print("#printing initial model followed by the board")
 		#print_model(self._model)
 		# #print_board(self._board)
 
@@ -65,18 +67,19 @@ class MyAI( AI ):
 
 	def getAction(self, number: int) -> "Action Object":
 
-		print("\nBEFORE ACTION")
-		print("Uncovered Frontier", self._uncovered_frontier)
-		print("Covered Marked Frontier", self._covered_unmarked_frontier)
-		print("Known Actions", self.actions_to_execute)
-		print_model(self._model)
-		# print("MOVE COUNT:", self._moveCount)
-		# print("SIZE OF QUEUE", self.action_queue.qsize())
-		# print("NUM VISITED", len(self._visited))
+		# print("\nBEFORE ACTION")
+		# print("Uncovered Frontier", self._uncovered_frontier)
+		# print("Covered Marked Frontier", self._covered_unmarked_frontier)
+		# print("Known Actions", self.actions_to_execute)
+		# print_model(self._model)
+		# # print("MOVE COUNT:", self._moveCount)
+		# # print("SIZE OF QUEUE", self.action_queue.qsize())
+		# # print("NUM VISITED", len(self._visited))
 		
 		
 
 		if self._uncover[0]:  # if our previous action was uncover, update the board based on 'number'
+			# print("MEOW")
 			x, y = self._uncover[1]
 			current_tile = self._model[y][x]
 			current_tile.label = number
@@ -91,28 +94,28 @@ class MyAI( AI ):
 			neighbors = self.generate_neighbors(x, y)
 			for i in neighbors:
 				if current_tile.effective_label == 0 and self._model[i[1]][i[0]].label == "*" :  # if the number is 0, add the neighbors into the queue since there isn't a bomb around it
-					print("\tadding uncover at ({}, {})".format(i[0],i[1]))
+					# print("\tadding uncover at ({}, {})".format(i[0],i[1]))
 					self.actions_to_execute.add((i, UNCOVER))
 					self.remove_covered_unmarked_neighbors(i)
 					continue
 				neighbor_tile = self._model[i[1]][i[0]]
 				if neighbor_tile.effective_label and neighbor_tile.effective_label == neighbor_tile.unvisited_neighbors:
-					#print(self._covered_unmarked_frontier)
+					## print(self._covered_unmarked_frontier)
 					for cu in self._covered_unmarked_frontier.copy():
 						if is_neighbor(cu, i):
-							print("\tadding flag at ({}, {})".format(cu[0], cu[1]))
+							# print("\tadding flag at ({}, {})".format(cu[0], cu[1]))
 							self.actions_to_execute.add((cu, FLAG))
 							self.remove_covered_unmarked_neighbors(cu)
 
 			if current_tile.effective_label > 0:  # greater than 0 -> add to uncovered_frontier
 				self._uncovered_frontier.add((x, y))
 				self.append_covered_unmarked_neighbors((x,y))
-			print("Uncovered Frontier", self._uncovered_frontier)
-			print("Covered Marked Frontier", self._covered_unmarked_frontier)
-			print("Known Actions", self.actions_to_execute)
+			# print("Uncovered Frontier", self._uncovered_frontier)
+			# print("Covered Marked Frontier", self._covered_unmarked_frontier)
+			# print("Known Actions", self.actions_to_execute)
 		if len(self._uncovered_frontier) != 0:
 			for coord in list(self._uncovered_frontier):
-				#print("coord to process", coord)
+				## print("coord to process", coord)
 				x, y = coord
 				tile = self._model[y][x]
 				if tile.effective_label == 0 and tile.unvisited_neighbors: # uncover all neighbors
@@ -125,26 +128,30 @@ class MyAI( AI ):
 							self.remove_covered_unmarked_neighbors(n)
 					###########################################
 				elif tile.effective_label == tile.unvisited_neighbors:  # flag all neighbors
-					#print("FOUND BOMBS")
+					## print("FOUND BOMBS")
 					self._uncovered_frontier.remove(coord)
 					neighbors = self.generate_neighbors(x, y)
 					for n in neighbors:
-						##print(n)
+						### print(n)
 						if self._model[n[1]][n[0]].label == "*":  # found bomb(s) so add flag action
 							self.actions_to_execute.add(((n[0], n[1]), FLAG))
 							self.remove_covered_unmarked_neighbors(n)
 				elif len(self.actions_to_execute) == 0:
-				#	print("PATTERN")
+				#	# print("PATTERN")
 					self.check_pattern(coord)
 					# check patters
 					# check model
-		poop = True
-		if len(self.actions_to_execute) == 0 and self._uncovered_tiles != self._safe_spaces and poop:
+		#poop = True
+		if len(self.actions_to_execute) == 0 and self._uncovered_tiles != self._safe_spaces and self.poop:
 			#backtrack
-			poop = False
-			print("BACKTRACK")
+			self.poop = False
+			# print("BACKTRACK")
 			potential_assignments = self.backtracking_search()
-			print("potential assignments\n", potential_assignments)
+			# print("potential assignments\n", potential_assignments)
+			# print("POOOP", len(potential_assignments))
+
+			self.assess_potential_assignments(potential_assignments)
+			# print(len(self.actions_to_execute))
 			#x = [{(2, 4): [M, None, 7], (3, 4): [Not Mine, None, 5], (4, 3): [Not Mine, None, 6], (3, 7): [Not Mine, None, 3], (7, 3): [Not Mine, None, 4], (7, 6): [M, None, 1], (2, 5): [Not Mine, None, 7], (7, 4): [Not Mine, None, 2], (7, 7): [Not Mine, None, 1], (3, 3): [M, None, 7], (2, 6): [Not Mine, None, 7], (3, 6): [M, None, 4], (5, 3): [M, None, 5], (6, 3): [Not Mine, None, 6]}]
 			
 			# TO IMPLEMENT: get best moves based on backtracking search
@@ -163,7 +170,7 @@ class MyAI( AI ):
 				self._moveCount += 1
 				self._uncovered_tiles += 1
 				
-				print("UNCOVER AT: ", x, y)
+				# print("UNCOVER AT: ", x, y)
 				return Action(AI.Action(UNCOVER), x, y)
 			elif action == FLAG:
 				self._moveCount += 1
@@ -174,17 +181,26 @@ class MyAI( AI ):
 				self._update_model(x, y, "M")
 
 				# print_model(self._model)
-				print("FLAG ACTION: ", x, y)
+				# print("FLAG ACTION: ", x, y)
 				return Action(AI.Action(FLAG), x, y)
 							
 		if self._uncovered_tiles == self._safe_spaces:  # we won the game
-			print("Completed Board...")			
+			# print("Completed Board...")			
 			return Action(AI.Action(LEAVE))
 		
-		#print(self._uncovered_tiles, self._safe_spaces)
-		print("Leaving...")
+		## print(self._uncovered_tiles, self._safe_spaces)
+
+		# # print("Leaving...")
+		# # print("Uncovered Frontier", self._uncovered_frontier)
+		# # print("Covered Marked Frontier", self._covered_unmarked_frontier)
+		# # print("Known Actions", self.actions_to_execute)
+
+		# print_model(self._model)
+		potential_assignments = self.backtracking_search()
+		self.assess_potential_assignments(potential_assignments)
+		# print(len(self.actions_to_execute))
 		##print_board(self._board)
-		#print(self._moveCount)
+		## print(self._moveCount)
 		return Action(AI.Action(LEAVE))
 		
 
@@ -202,7 +218,7 @@ class MyAI( AI ):
 			elif c[1] < 0 or c[1] > self._rowDimension - 1:
 				coords.remove(c)
 
-		###print(f'Neighbors of {x}, {y} are: {coords}')
+		#### print(f'Neighbors of {x}, {y} are: {coords}')
 		return coords
 	
 	def _create_model(self):
@@ -270,6 +286,9 @@ class MyAI( AI ):
 	def backtracking_search(self) -> list[dict]:
 		# 1. order variables in V (covered_unmarked_frontier)
 		# -----> ordering by num of unvisitied neighbors
+		if len(self._covered_unmarked_frontier) == 0 or len(self._uncovered_frontier) == 0:
+			return
+
 		ordered = list()
 		for coord in self._covered_unmarked_frontier:
 			# get num of neighbors that are in uncovered frontier
@@ -277,69 +296,71 @@ class MyAI( AI ):
 			ordered.append((num, coord))
 
 		ordered_variables = sorted(ordered,key= lambda x:x[0], reverse=True)
-		print("Ordered Variables\n", ordered_variables)
+
+		# print("Ordered Variables\n", ordered_variables)
 		ordered_ll = create_assignment_LL(ordered_variables)
 		constraints = {i: self._model[i[1]][i[0]].copy() for i in self._uncovered_frontier}
 		variables = {i: self._model[i[1]][i[0]].copy() for i in self._covered_unmarked_frontier}
 
-		print("constraints\n", constraints)
-		print("variables\n", variables)
+		# print("constraints\n", constraints)
+		# print("variables\n", variables)
 		
 		current_var = ordered_ll.head
 		constraints_copy = {i: constraints[i].copy() for i in constraints}
 
 		full_complete_assignments = list()
 		while True:
-			print("VAR CURRENTLY ON:", current_var.key, current_var.value)
-			if current_var.value == None:
+			# print("VAR CURRENTLY ON:", current_var.key, current_var.value)
+			if current_var and current_var.value == None:
 				current_var.value = {"Mine"}
-				variables[current_var.key].label = "M"
-				is_valid, updated_constraints = self._check_update_constraints(current_var.key, constraints_copy, variables)
-				print(constraints_copy)
+				is_valid, updated_constraints = self._check_update_constraints(current_var.key, "M", constraints_copy)
+				# print(constraints_copy)
 				if is_valid:
 					constraints_copy = updated_constraints
-					print(current_var.key, "is a Mine")
-					print("\tupdated constraints\n\t", constraints_copy)
+					variables[current_var.key].label = "M"
+					# print(current_var.key, "is a Mine")
+					# print("\tupdated constraints\n\t", constraints_copy)
 					if current_var.next:
 						current_var = current_var.next
-					#print(current_var.key, "is a Mine")
+					## print(current_var.key, "is a Mine")
 					#continue
 				else:
 					variables[current_var.key].label = "*"
 				continue
-			if len(current_var.value) == 1:
-				print(current_var.value, variables[current_var.key].label)
-				if variables[current_var.key].label != "*": #this means we're coming from a backtrack so we need to update the constraints
+			if current_var and len(current_var.value) == 1:  # this means we've tried mine on it already so now we try no mine
+				# print(current_var.value, variables[current_var.key].label)
+				if variables[current_var.key].label != "*": #this means we're coming from a backtrack since it's been previously assigned
 					for c, c_tile in constraints_copy.items():
 						if is_neighbor(c, current_var.key):
 							c_tile.effective_label += 1
 							c_tile.unvisited_neighbors += 1		
-					print("poopy", constraints_copy)
-
 
 				current_var.value.add("Not Mine")
-				variables[current_var.key].label = "Not Mine"
-				is_valid, updated_constraints = self._check_update_constraints(current_var.key, constraints_copy, variables)
+				is_valid, updated_constraints = self._check_update_constraints(current_var.key, "Not Mine", constraints_copy)
 				if is_valid:
+					variables[current_var.key].label = "Not Mine"
 					constraints_copy = updated_constraints
-					print(current_var.key, "is not a mine")
-					print("\tupdated constraints\n\t", constraints_copy)
+					# print(current_var.key, "is not a mine")
+					# print("\tupdated constraints\n\t", constraints_copy)
 					if current_var.next:
 						current_var = current_var.next
-					#print(current_var.key, "is not a mine")
+					## print(current_var.key, "is not a mine")
 					#continue
 				else:
 					variables[current_var.key].label = "*"
 				continue
 			if current_var.next == None and variables[current_var.key].label != "*": # this means we've reached a complete assignment
-				print("FULL ASSIGNMENT")
-				full_complete_assignments.append(variables)
-				if len(full_complete_assignments) == 2:
-					break
+				# print("FULL ASSIGNMENT")
+				# print("\t", variables[(2,4)])
+				# print(variables)
+				full_complete_assignments.append({i: variables[i].copy() for i in variables})
+				# print(full_complete_assignments)
+				# if len(full_complete_assignments) == 2:
+				# 	break
 				# TO IMPLEMENT: initiate backtrack to get all potetial assignments
 				
 			# backtrack
-			print("time to backtrack")
+			# print("time to backtrack")
 			current_var.value = None
 			past_label = variables[current_var.key].label
 			variables[current_var.key].label = "*"
@@ -351,11 +372,11 @@ class MyAI( AI ):
 						c_tile.unvisited_neighbors += 1
 			
 			current_var = current_var.prev
-			print("BACKTRACKED VAL", current_var.key, current_var.value)
-			# print(variables)
-			print("constraints", constraints_copy)
-			# print("stopped")
-			if current_var.prev == None:
+			# print("BACKTRACKED VAL", current_var.key, current_var.value)
+			# # print(variables)
+			# print("constraints", constraints_copy)
+			# # print("stopped")
+			if current_var and current_var.prev == None:
 				break
 		#	break
 
@@ -368,14 +389,12 @@ class MyAI( AI ):
 		# 	else:
 		# 		variables[covered].label = "No Mine"
 
-
-	def _check_update_constraints(self, changed_coord, constraint_dict:dict, variable_dict: dict) -> tuple:
+	def _check_update_constraints(self, changed_coord, changed_label, constraint_dict:dict) -> tuple:
 		"""
 		Based on a potential assignment, will check if the constraints are satisfied.
 		Returns a tuple that contains (boolean, updated constraint_dict)
 		"""
 		constraint_dict = {i: constraint_dict[i].copy() for i in constraint_dict}
-		changed_label = variable_dict[changed_coord].label
 
 		for coord in constraint_dict.keys():
 		#check constraints
@@ -389,7 +408,7 @@ class MyAI( AI ):
 				if changed_label == "M":
 					t.effective_label -= 1
 				t.unvisited_neighbors -= 1
-	#	print("\tupdated constraints", constraint_dict)
+	#	# print("\tupdated constraints", constraint_dict)
 		return (True, constraint_dict)
 
 	def _update_neighbors(self, changed_coord, constraint_dict):
@@ -415,9 +434,9 @@ class MyAI( AI ):
 				uncovered_neighbors.add(coord)
 		covered_neighbors = self._get_covered_unmarked_neighbors(tile_coord)
 		
-		# print(tile_coord)
-		# print("UN", uncovered_neighbors)
-		# print("CN", covered_neighbors)
+		# # print(tile_coord)
+		# # print("UN", uncovered_neighbors)
+		# # print("CN", covered_neighbors)
 		# 1-1-x
 		if tile.unvisited_neighbors == 2:
 			for coordUN in uncovered_neighbors:
@@ -425,25 +444,25 @@ class MyAI( AI ):
 				if (un_x == x and abs(un_y - y) == 1) or (abs(un_x - x) == 1 and un_y == y): # if neighbor is right next to us
 					neighbor_tile = self._model[un_y][un_x]
 					if neighbor_tile.effective_label == 1 and neighbor_tile.unvisited_neighbors > 2:
-						print("1-1-x pattern: TRUE")
+						# print("1-1-x pattern: TRUE")
 						covered_neighbors2 = self._get_covered_unmarked_neighbors(coordUN)
-						print("CN2", covered_neighbors2)
+						# print("CN2", covered_neighbors2)
 						for r in covered_neighbors2.difference(covered_neighbors):
-							print("Adding uncover...")
+							# print("Adding uncover...")
 							####################################
 							#shouldn't need if covered_unmarked is correct
 							potential_uncover_tile = self._model[r[1]][r[0]]
 							if potential_uncover_tile.label == "*":
 								self.actions_to_execute.add(((r), UNCOVER))
 								self.remove_covered_unmarked_neighbors(r)
-							print(r)
+							# print(r)
 						# now get the neighbors of this one from covered unmarked frontier and whichever ones they don't have in common can't be bombs
 
 					 # if neighbor is right next to us and has unvisited > 3
 
 	
 	def _get_covered_unmarked_neighbors(self, coord) -> set:
-	#	print("r",self._covered_unmarked_frontier)
+	#	# print("r",self._covered_unmarked_frontier)
 		x, y = coord	
 		return {c for c in self._covered_unmarked_frontier if is_neighbor((x,y), c)}	
 
@@ -468,6 +487,40 @@ class MyAI( AI ):
 		"""
 		if coord in self._covered_unmarked_frontier:
 			self._covered_unmarked_frontier.remove(coord)
+	
+
+	def assess_potential_assignments(self, potential_assignments: dict):
+		# {coord: {mine: x/y, not mine: x/y })}
+		if not potential_assignments or len(potential_assignments) == 0:
+			return
+		result = defaultdict(int)
+		total_assignments = len(potential_assignments)
+		keys = potential_assignments[0].keys()
+		for assignment in potential_assignments:
+			for coord, tile in assignment.items():
+				if tile.label == "M":
+					result[coord] += 1
+
+		
+		# print("RESULT", result)
+		actions = set()
+		for k in keys:
+			if k == (2,6):
+				continue
+			if result[k] == total_assignments:
+				# print("adding flag at ", k)
+				
+				self.actions_to_execute.add((k, FLAG))
+				self.remove_covered_unmarked_neighbors(k)
+			elif result[k] == 0:
+				# print("adding uncover at", k)
+				self.actions_to_execute.add((k, UNCOVER))
+				self.remove_covered_unmarked_neighbors(k)
+
+		# print(self.actions_to_execute)		
+		return result
+
+
 def is_neighbor(a: set, b: set) -> bool:
 	"""
 	Assuming the coords are valid, returns true if they are neighbors.
@@ -493,11 +546,11 @@ def print_model(model):
 
 	
 
-def print_board(board):
-	print("-----------------")
-	for i in board:
-		print(i)
-	print("-----------------")
+# def print_board(board):
+# 	# print("-----------------")
+# 	for i in board:
+# 		# print(i)
+# 	# print("-----------------")
 
 
 # run with  python3 Main.py -f .\Problems\Easy_world_1.txt for one world
@@ -539,9 +592,9 @@ class LinkedList:
 def printLL(ll):
 	temp = ll.head
 	while temp:
-		print(temp.key, end=' ')
+		# print(temp.key, end=' ')
 		temp = temp.next
-	print()
+	# print()
 def create_assignment_LL(ordered: list) -> LinkedList:
 	result = LinkedList()
 	temp = None
@@ -556,3 +609,4 @@ def create_assignment_LL(ordered: list) -> LinkedList:
 		
 	printLL(result)
 	return result
+
