@@ -71,7 +71,7 @@ class MyAI( AI ):
 		# print("Uncovered Frontier", self._uncovered_frontier)
 		# print("Covered Marked Frontier", self._covered_unmarked_frontier)
 		# print("Known Actions", self.actions_to_execute)
-		# print_model(self._model)
+		#print_model(self._model)
 		# # print("MOVE COUNT:", self._moveCount)
 		# # print("SIZE OF QUEUE", self.action_queue.qsize())
 		# # print("NUM VISITED", len(self._visited))
@@ -102,7 +102,7 @@ class MyAI( AI ):
 				if neighbor_tile.effective_label and neighbor_tile.effective_label == neighbor_tile.unvisited_neighbors:
 					## print(self._covered_unmarked_frontier)
 					for cu in self._covered_unmarked_frontier.copy():
-						if is_neighbor(cu, i):
+						if is_neighbor(cu, i) and self._model[cu[1]][cu[0]] == "*":
 							# print("\tadding flag at ({}, {})".format(cu[0], cu[1]))
 							self.actions_to_execute.add((cu, FLAG))
 							self.remove_covered_unmarked_neighbors(cu)
@@ -145,7 +145,7 @@ class MyAI( AI ):
 		if len(self.actions_to_execute) == 0 and self._uncovered_tiles != self._safe_spaces and self.poop:
 			#backtrack
 			self.poop = False
-			# print("BACKTRACK")
+		#	print("BACKTRACK")
 			potential_assignments = self.backtracking_search()
 			# print("potential assignments\n", potential_assignments)
 			# print("POOOP", len(potential_assignments))
@@ -190,12 +190,12 @@ class MyAI( AI ):
 		
 		## print(self._uncovered_tiles, self._safe_spaces)
 
-		# # print("Leaving...")
+		#print("Leaving...")
 		# # print("Uncovered Frontier", self._uncovered_frontier)
 		# # print("Covered Marked Frontier", self._covered_unmarked_frontier)
 		# # print("Known Actions", self.actions_to_execute)
 
-		# print_model(self._model)
+	#	print_model(self._model)
 		potential_assignments = self.backtracking_search()
 		self.assess_potential_assignments(potential_assignments)
 		# print(len(self.actions_to_execute))
@@ -349,7 +349,7 @@ class MyAI( AI ):
 				else:
 					variables[current_var.key].label = "*"
 				continue
-			if current_var.next == None and variables[current_var.key].label != "*": # this means we've reached a complete assignment
+			if current_var and current_var.next == None and variables[current_var.key].label != "*": # this means we've reached a complete assignment
 				# print("FULL ASSIGNMENT")
 				# print("\t", variables[(2,4)])
 				# print(variables)
@@ -361,6 +361,8 @@ class MyAI( AI ):
 				
 			# backtrack
 			# print("time to backtrack")
+			if not current_var:
+				break
 			current_var.value = None
 			past_label = variables[current_var.key].label
 			variables[current_var.key].label = "*"
@@ -561,6 +563,7 @@ def print_model(model):
 # run with  python Main.py -f .\ProblemsBeginner\  # 362
 # run with  python Main.py -f .\ProblemsIntermediate\ # 65
 # python Main.py -f .\ProblemsBeginner\Beginner_world_1.txt
+# python Main.py -f .\ProblemsIntermediate\Intermediate_world_1.txt
 
 # in openlab
 # python Main.pyc -f ./Problems
