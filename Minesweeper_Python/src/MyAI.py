@@ -37,7 +37,7 @@ class MyAI( AI ):
 		self._colDimension = colDimension
 		self._totalMines = totalMines
 		self._moveCount = 0
-		self._uncovered_tiles = 0
+		self._uncovered_tiles = 1
 		self._safe_spaces = colDimension*rowDimension - totalMines
 
 		self._model =  [[]]
@@ -145,6 +145,8 @@ class MyAI( AI ):
 			print("BACKTRACK")
 			potential_assignments = self.backtracking_search()
 			print("potential assignments\n", potential_assignments)
+			#x = [{(2, 4): [M, None, 7], (3, 4): [Not Mine, None, 5], (4, 3): [Not Mine, None, 6], (3, 7): [Not Mine, None, 3], (7, 3): [Not Mine, None, 4], (7, 6): [M, None, 1], (2, 5): [Not Mine, None, 7], (7, 4): [Not Mine, None, 2], (7, 7): [Not Mine, None, 1], (3, 3): [M, None, 7], (2, 6): [Not Mine, None, 7], (3, 6): [M, None, 4], (5, 3): [M, None, 5], (6, 3): [Not Mine, None, 6]}]
+			
 			# TO IMPLEMENT: get best moves based on backtracking search
 			# for coord, tile in potential_assignments[0].items():
 			# 	if tile.label == "M":
@@ -165,7 +167,7 @@ class MyAI( AI ):
 				return Action(AI.Action(UNCOVER), x, y)
 			elif action == FLAG:
 				self._moveCount += 1
-				self._uncovered_tiles += 1
+
 
 				# update board for flag
 				self._model[y][x].label = "M"
@@ -178,6 +180,8 @@ class MyAI( AI ):
 		if self._uncovered_tiles == self._safe_spaces:  # we won the game
 			print("Completed Board...")			
 			return Action(AI.Action(LEAVE))
+		
+		#print(self._uncovered_tiles, self._safe_spaces)
 		print("Leaving...")
 		##print_board(self._board)
 		#print(self._moveCount)
@@ -304,7 +308,15 @@ class MyAI( AI ):
 					variables[current_var.key].label = "*"
 				continue
 			if len(current_var.value) == 1:
-				#print(current_var.value)
+				print(current_var.value, variables[current_var.key].label)
+				if variables[current_var.key].label != "*": #this means we're coming from a backtrack so we need to update the constraints
+					for c, c_tile in constraints_copy.items():
+						if is_neighbor(c, current_var.key):
+							c_tile.effective_label += 1
+							c_tile.unvisited_neighbors += 1		
+					print("poopy", constraints_copy)
+
+
 				current_var.value.add("Not Mine")
 				variables[current_var.key].label = "Not Mine"
 				is_valid, updated_constraints = self._check_update_constraints(current_var.key, constraints_copy, variables)
@@ -320,25 +332,32 @@ class MyAI( AI ):
 					variables[current_var.key].label = "*"
 				continue
 			if current_var.next == None and variables[current_var.key].label != "*": # this means we've reached a complete assignment
+				print("FULL ASSIGNMENT")
 				full_complete_assignments.append(variables)
+				if len(full_complete_assignments) == 2:
+					break
 				# TO IMPLEMENT: initiate backtrack to get all potetial assignments
 				
-			#backtrack
+			# backtrack
+			print("time to backtrack")
 			current_var.value = None
 			past_label = variables[current_var.key].label
 			variables[current_var.key].label = "*"
-			for c, c_tile in constraints_copy.items():
-				if is_neighbor(c, current_var.key):
-					if past_label == "M":
-						c_tile.effective_label += 1
-					c_tile.unvisited_neighbors += 1
+			if past_label != "*":
+				for c, c_tile in constraints_copy.items():
+					if is_neighbor(c, current_var.key):
+						if past_label == "M":
+							c_tile.effective_label += 1
+						c_tile.unvisited_neighbors += 1
 			
 			current_var = current_var.prev
-			print("BACKTRACKED VAL", current_var.key)
-			print(variables)
-			print(constraints_copy)
-			print("stopped")
-			break
+			print("BACKTRACKED VAL", current_var.key, current_var.value)
+			# print(variables)
+			print("constraints", constraints_copy)
+			# print("stopped")
+			if current_var.prev == None:
+				break
+		#	break
 
 		return full_complete_assignments
 		# for covered in ordered_variables:
@@ -364,7 +383,8 @@ class MyAI( AI ):
 				t = constraint_dict[coord]
 				if t.unvisited_neighbors == 0 or (changed_label == "M" and t.effective_label == 0):# or t.effective_label == 0:
 					return (False, dict())
-				
+				if changed_label == "Not Mine" and t.effective_label == 1 and t.unvisited_neighbors == 1:
+					return (False, dict())
 				# passes constrains so update
 				if changed_label == "M":
 					t.effective_label -= 1
