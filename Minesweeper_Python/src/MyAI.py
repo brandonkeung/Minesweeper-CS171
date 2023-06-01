@@ -283,7 +283,7 @@ class MyAI( AI ):
 				if current_tile.effective_label == 0 and neighbor_tile.unvisited_neighbors == 0 and (x,y) in self._uncovered_frontier: # this tile is now solved so take out of uncovered frontier
 					self._uncovered_frontier.remove((x,y))
 	
-	def backtracking_search(self) -> list[dict]:
+	def backtracking_search(self):
 		# 1. order variables in V (covered_unmarked_frontier)
 		# -----> ordering by num of unvisitied neighbors
 		if len(self._covered_unmarked_frontier) == 0 or len(self._uncovered_frontier) == 0:
@@ -566,8 +566,10 @@ def print_model(model):
 # python Main.py -f .\ProblemsIntermediate\Intermediate_world_1.txt
 
 # in openlab
-# python Main.pyc -f ./Problems
-
+# python3 Main.pyc -f /home/bsteier/Minesweeper-CS171/Minesweeper_Python/src/ProblemsIntermediate
+# run with  python3 Main.py -f ./Problems/ #1000
+# run with  python3 Main.py -f ./ProblemsBeginner/ # 581
+# run with  python3 Main.py -f ./ProblemsIntermediate/ # 458
 
 class Tile():
 	def __init__(self, label, effective_label, unvisited_neighbors) -> None:
