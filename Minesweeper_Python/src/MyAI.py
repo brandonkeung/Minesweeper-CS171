@@ -66,12 +66,12 @@ class MyAI( AI ):
 		self._uncovered_frontier = set()   # tiles that have been uncovered but not solved..
 
 	def getAction(self, number: int) -> "Action Object":
-
+		#print("action")
 		# print("\nBEFORE ACTION")
 		# print("Uncovered Frontier", self._uncovered_frontier)
 		# print("Covered Marked Frontier", self._covered_unmarked_frontier)
 		# print("Known Actions", self.actions_to_execute)
-		#print_model(self._model)
+		# print_model(self._model)
 		# # print("MOVE COUNT:", self._moveCount)
 		# # print("SIZE OF QUEUE", self.action_queue.qsize())
 		# # print("NUM VISITED", len(self._visited))
@@ -185,19 +185,19 @@ class MyAI( AI ):
 				return Action(AI.Action(FLAG), x, y)
 							
 		if self._uncovered_tiles == self._safe_spaces:  # we won the game
-			# print("Completed Board...")			
+			print("Completed Board...")			
 			return Action(AI.Action(LEAVE))
 		
 		## print(self._uncovered_tiles, self._safe_spaces)
 
-		#print("Leaving...")
+		print("Leaving...")
 		# # print("Uncovered Frontier", self._uncovered_frontier)
 		# # print("Covered Marked Frontier", self._covered_unmarked_frontier)
 		# # print("Known Actions", self.actions_to_execute)
 
 	#	print_model(self._model)
-		potential_assignments = self.backtracking_search()
-		self.assess_potential_assignments(potential_assignments)
+		# potential_assignments = self.backtracking_search()
+		# self.assess_potential_assignments(potential_assignments)
 		# print(len(self.actions_to_execute))
 		##print_board(self._board)
 		## print(self._moveCount)
@@ -564,12 +564,16 @@ def print_model(model):
 # run with  python Main.py -f .\ProblemsIntermediate\ # 65
 # python Main.py -f .\ProblemsBeginner\Beginner_world_1.txt
 # python Main.py -f .\ProblemsIntermediate\Intermediate_world_1.txt
+# python Main.py -f /home/bsteier/Minesweeper-CS171/Minesweeper_Python/src/ProblemsExpertSmall
 
 # in openlab
 # python3 Main.pyc -f /home/bsteier/Minesweeper-CS171/Minesweeper_Python/src/ProblemsIntermediate
-# run with  python3 Main.py -f ./Problems/ #1000
+# run with  python3 Main.pyc -f ./Problems/ #1000
 # run with  python3 Main.py -f ./ProblemsBeginner/ # 581
 # run with  python3 Main.py -f ./ProblemsIntermediate/ # 458
+# python3 Main.pyc -f /home/bsteier/Minesweeper-CS171/Minesweeper_Python/src/ProblemsExpert
+
+# python3 Main.pyc -f /home/bsteier/Minesweeper-CS171/Minesweeper_Python/src/ProblemsExpert/Expert_world_1.txt
 
 class Tile():
 	def __init__(self, label, effective_label, unvisited_neighbors) -> None:
