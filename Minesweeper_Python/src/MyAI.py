@@ -18,6 +18,7 @@ import random
 from queue import Queue
 from datetime import datetime
 from collections import defaultdict
+import time
 
 LEAVE = 0
 UNCOVER = 1
@@ -315,7 +316,12 @@ class MyAI( AI ):
 
 		full_complete_assignments = list()
 		first_var = ordered_ll.head
+		num_of_iterations = 0
+		start_time = time.time()
 		while True:
+			if time.time() - start_time > 120:
+				break
+			num_of_iterations+=1
 			# print("VAR CURRENTLY ON:", current_var.key, current_var.value)
 			if current_var and current_var == first_var and current_var.value and len(current_var.value) == 2:
 				print("none")
@@ -590,7 +596,7 @@ def print_model(model):
 # run with  python Main.py -f .\Problems\ for all worlds
 # run with  python Main.py -f .\ProblemsBeginner\  # 665
 # run with  python Main.py -f .\ProblemsIntermediate\ # 552
-# run with  python Main.py -f .\ProblemsExpertSmall\
+# run with  python Main.py -f .\ProblemsExpertSmall\ # 8
 # python Main.py -f .\ProblemsBeginner\Beginner_world_1.txt
 # python Main.py -f .\ProblemsIntermediate\Intermediate_world_1.txt
 # python Main.py -f /home/bsteier/Minesweeper-CS171/Minesweeper_Python/src/ProblemsExpertSmall
