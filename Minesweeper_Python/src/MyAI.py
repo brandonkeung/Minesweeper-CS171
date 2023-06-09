@@ -142,7 +142,7 @@ class MyAI( AI ):
 					# check patters
 					# check model
 		#poop = True
-		if len(self.actions_to_execute) == 0 and self._uncovered_tiles != self._safe_spaces and self.poop:
+		if len(self.actions_to_execute) == 0 and self._uncovered_tiles != self._safe_spaces:# and self.poop:
 			#backtrack
 			self.poop = False
 		#	print("BACKTRACK")
@@ -286,6 +286,7 @@ class MyAI( AI ):
 	def backtracking_search(self):
 		# 1. order variables in V (covered_unmarked_frontier)
 		# -----> ordering by num of unvisitied neighbors
+		print("in backtracking")
 		if len(self._covered_unmarked_frontier) == 0 or len(self._uncovered_frontier) == 0:
 			return
 
@@ -560,11 +561,11 @@ def print_model(model):
 
 # run with  python Main.py -f .\Problems\Easy_world_1.txt for one world
 # run with  python Main.py -f .\Problems\ for all worlds
-# run with  python Main.py -f .\ProblemsBeginner\  # 362
+# run with  python Main.py -f .\ProblemsBeginner\  # 578
 # run with  python Main.py -f .\ProblemsIntermediate\ # 65
 # python Main.py -f .\ProblemsBeginner\Beginner_world_1.txt
 # python Main.py -f .\ProblemsIntermediate\Intermediate_world_1.txt
-# python Main.py -f /home/bsteier/Minesweeper-CS171/Minesweeper_Python/src/ProblemsExpertSmall
+# python Main.py -f .\ProblemsExpertSmall
 
 # in openlab
 # python3 Main.pyc -f /home/bsteier/Minesweeper-CS171/Minesweeper_Python/src/ProblemsIntermediate
