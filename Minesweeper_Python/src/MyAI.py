@@ -43,6 +43,8 @@ class MyAI( AI ):
 		self._uncovered_tiles = 1
 		self._safe_spaces = colDimension*rowDimension - totalMines
 
+		self._mines_found = 0
+
 		self._model =  [[]]
 		self._create_model()
 
@@ -72,10 +74,9 @@ class MyAI( AI ):
 		# print("Uncovered Frontier", self._uncovered_frontier)
 		# print("Covered Marked Frontier", self._covered_unmarked_frontier)
 		# print("Known Actions", self.actions_to_execute)
-		# print_model(self._model)
-		# print("MOVE COUNT:", self._moveCount)
-		# print("SIZE OF QUEUE", self.action_queue.qsize())
-		# print("NUM VISITED", len(self._visited))
+	#	print_model(self._model)
+
+
 		
 		
 
@@ -153,7 +154,7 @@ class MyAI( AI ):
 			potential_assignments = self.backtracking_search()
 			# print("potential assignments\n", potential_assignments)
 			# print("POOOP", len(potential_assignments))
-
+			print("NUM MINES", self._mines_found)
 			self.assess_potential_assignments(potential_assignments)
 			#print("ACTIONS AFTER BT", len(self.actions_to_execute))
 			#x = [{(2, 4): [M, None, 7], (3, 4): [Not Mine, None, 5], (4, 3): [Not Mine, None, 6], (3, 7): [Not Mine, None, 3], (7, 3): [Not Mine, None, 4], (7, 6): [M, None, 1], (2, 5): [Not Mine, None, 7], (7, 4): [Not Mine, None, 2], (7, 7): [Not Mine, None, 1], (3, 3): [M, None, 7], (2, 6): [Not Mine, None, 7], (3, 6): [M, None, 4], (5, 3): [M, None, 5], (6, 3): [Not Mine, None, 6]}]
@@ -168,6 +169,7 @@ class MyAI( AI ):
 		if (len(self.actions_to_execute) != 0):   #if our action queue is not empty, do actions
 
 			coord, action = self.actions_to_execute.pop()
+			print("ACTION TO EXECUTE", coord, action)
 			x, y = coord
 			if action == UNCOVER:
 				self._uncover = (True, (x, y))
@@ -175,6 +177,7 @@ class MyAI( AI ):
 				self._uncovered_tiles += 1
 				
 				# print("UNCOVER AT: ", x, y)
+				self.remove_covered_unmarked_neighbors((x,y))
 				return Action(AI.Action(UNCOVER), x, y)
 			elif action == FLAG:
 				self._moveCount += 1
@@ -186,6 +189,8 @@ class MyAI( AI ):
 
 				# print_model(self._model)
 				# print("FLAG ACTION: ", x, y)
+				self.remove_covered_unmarked_neighbors((x,y))
+				self._mines_found += 1
 				return Action(AI.Action(FLAG), x, y)
 							
 		if self._uncovered_tiles == self._safe_spaces:  # we won the game
@@ -292,6 +297,7 @@ class MyAI( AI ):
 		# 1. order variables in V (covered_unmarked_frontier)
 		# -----> ordering by num of unvisitied neighbors
 		print("IN BACKTRACKING")
+		print_model(self._model)
 		if len(self._covered_unmarked_frontier) == 0 or len(self._uncovered_frontier) == 0:
 			return
 
@@ -303,7 +309,7 @@ class MyAI( AI ):
 
 		ordered_variables = sorted(ordered,key= lambda x:x[0], reverse=True)
 
-		# print("Ordered Variables\n", ordered_variables)
+		#print("Ordered Variables\n", ordered_variables)
 		ordered_ll = create_assignment_LL(ordered_variables)
 		constraints = {i: self._model[i[1]][i[0]].copy() for i in self._uncovered_frontier}
 		variables = {i: self._model[i[1]][i[0]].copy() for i in self._covered_unmarked_frontier}
@@ -318,14 +324,23 @@ class MyAI( AI ):
 		first_var = ordered_ll.head
 		num_of_iterations = 0
 		start_time = time.time()
+	#	print(len(variables))
 		while True:
+			#print(ordered_ll.head.value, ordered_ll.head.key)
+			#print(current_var.key, current_var.value)
+			if current_var.key == (1,0):
+				print(variables)
+				print(current_var.next)
 			if time.time() - start_time > 120:
+				print("TIMEOUT")
 				break
-			num_of_iterations+=1
+			
 			# print("VAR CURRENTLY ON:", current_var.key, current_var.value)
 			if current_var and current_var == first_var and current_var.value and len(current_var.value) == 2:
 				print("none")
 				break
+
+			
 			if current_var and current_var.value == None:
 				current_var.value = {"Mine"}
 				is_valid, updated_constraints = self._check_update_constraints(current_var.key, "M", constraints_copy)
@@ -337,12 +352,16 @@ class MyAI( AI ):
 					# print("\tupdated constraints\n\t", constraints_copy)
 					if current_var.next:
 						current_var = current_var.next
+					
 					## print(current_var.key, "is a Mine")
 					#continue
 				else:
 					variables[current_var.key].label = "*"
 				continue
+			
 			if current_var and len(current_var.value) == 1:  # this means we've tried mine on it already so now we try no mine
+				if current_var.key == (1,0):
+					print("WRONG IF")
 				# print(current_var.value, variables[current_var.key].label)
 				if variables[current_var.key].label != "*": #this means we're coming from a backtrack since it's been previously assigned
 					for c, c_tile in constraints_copy.items():
@@ -365,9 +384,9 @@ class MyAI( AI ):
 					variables[current_var.key].label = "*"
 				continue
 			if current_var and current_var.next == None and variables[current_var.key].label != "*": # this means we've reached a complete assignment
-				# print("FULL ASSIGNMENT")
+				print("FULL ASSIGNMENT")
 				# print("\t", variables[(2,4)])
-				# print(variables)
+				print(variables)
 				full_complete_assignments.append({i: variables[i].copy() for i in variables})
 				# print(full_complete_assignments)
 				# if len(full_complete_assignments) == 2:
@@ -396,7 +415,8 @@ class MyAI( AI ):
 			if current_var and current_var.prev == None:
 				break
 		#	break
-
+		
+		print(full_complete_assignments)
 		return full_complete_assignments
 		# for covered in ordered_variables:
 		# 	variables[covered].label = "M"
@@ -544,12 +564,12 @@ class MyAI( AI ):
 			if k == (2,6):
 				continue
 			if result[k] == total_assignments:
-				# print("adding flag at ", k)
+				print("adding flag at ", k)
 				
 				self.actions_to_execute.add((k, FLAG))
 				self.remove_covered_unmarked_neighbors(k)
 			elif result[k] == 0:
-				# print("adding uncover at", k)
+				print("adding uncover at", k)
 				self.actions_to_execute.add((k, UNCOVER))
 				self.remove_covered_unmarked_neighbors(k)
 
@@ -604,9 +624,11 @@ def print_model(model):
 # in openlab
 # python3 Main.pyc -f /home/bsteier/Minesweeper-CS171/Minesweeper_Python/src/ProblemsIntermediate
 # run with  python3 Main.pyc -f ./Problems/ #1000
-# run with  python3 Main.py -f ./ProblemsBeginner/ # 581
-# run with  python3 Main.py -f ./ProblemsIntermediate/ # 458
+# run with  python3 Main.py -f ./ProblemsBeginner/ # 736
+# run with  python3 Main.py -f ./ProblemsIntermediate/ # 673
 # python3 Main.pyc -f /home/bsteier/Minesweeper-CS171/Minesweeper_Python/src/ProblemsExpert
+# python3 Main.py -f /home/bsteier/Minesweeper-CS171/Minesweeper_Python/src/ProblemsExpertSmall/  16
+# python3 Main.py -f /home/bsteier/Minesweeper-CS171/Minesweeper_Python/src/ProblemsExpertSmall/Expert_world_1.txt
 
 # python3 Main.pyc -f /home/bsteier/Minesweeper-CS171/Minesweeper_Python/src/ProblemsExpert/Expert_world_1.txt
 
