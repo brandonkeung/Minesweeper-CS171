@@ -32,7 +32,7 @@ class MyAI( AI ):
 	def __init__(self, rowDimension, colDimension, totalMines, startX, startY):
 		### print(startX, startY, rowDimension, colDimension, totalMines)
 
-		self.poop = True
+		self.start_time = time.time()
 		self._coveredTile = 0 # 2 kinds marked (know there is mine) or unmakred (dont know)
 		self._startX = startX
 		self._startY = startY
@@ -69,6 +69,8 @@ class MyAI( AI ):
 		self._uncovered_frontier = set()   # tiles that have been uncovered but not solved..
 
 	def getAction(self, number: int) -> "Action Object":
+		if time.time() - self.start_time >= 300:
+			return Action(AI.Action(LEAVE))
 		# print("\nBEFORE ACTION")
 		# print("Uncovered Frontier", self._uncovered_frontier)
 		# print("Covered Marked Frontier", self._covered_unmarked_frontier)
@@ -331,14 +333,14 @@ class MyAI( AI ):
 		while True:
 			#print(ordered_ll.head.value, ordered_ll.head.key)
 			#print(current_var.key, current_var.value)
-			if time.time() - start_time > 120:
+			if time.time() - start_time > 250:
 				print("TIMEOUT")
-				break
+				return full_complete_assignments
 			
 			# print("VAR CURRENTLY ON:", current_var.key, current_var.value)
 			if current_var and current_var == first_var and current_var.value and len(current_var.value) == 2:
 				print("none")
-				break
+				return full_complete_assignments
 
 			
 			if current_var and current_var.value == None:
@@ -629,6 +631,7 @@ def print_model(model):
 # python3 Main.py -f /home/bsteier/Minesweeper-CS171/Minesweeper_Python/src/ProblemsExpertSmall/Expert_world_1.txt
 
 # python3 Main.pyc -f /home/bsteier/Minesweeper-CS171/Minesweeper_Python/src/ProblemsExpert/Expert_world_1.txt
+# python3 Main.py -f /home/bsteier/Minesweeper-CS171/Minesweeper_Python/src/Tournament
 
 # current failed world
 # python Main.py -f .\ProblemsIntermediate\Intermediate_world_2.txt   <- fix by creating an if block to check when we need to randomly guess
