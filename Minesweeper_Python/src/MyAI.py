@@ -203,8 +203,8 @@ class MyAI( AI ):
 		print(self._uncovered_frontier)
 		print(self._covered_unmarked_frontier)
 		print("Leaving...")
-		print("MINES", self._mines_found)
-		print_model(self._model)
+		# print("MINES", self._mines_found)
+		# print_model(self._model)
 		# # print("Uncovered Frontier", self._uncovered_frontier)
 		# # print("Covered Marked Frontier", self._covered_unmarked_frontier)
 		# # print("Known Actions", self.actions_to_execute)
@@ -318,9 +318,9 @@ class MyAI( AI ):
 		constraints = {i: self._model[i[1]][i[0]].copy() for i in self._uncovered_frontier}
 		variables = {i: self._model[i[1]][i[0]].copy() for i in self._covered_unmarked_frontier}
 
-		print("constraints\n", constraints)
-		print("variables\n", variables)
-		print_model(self._model)
+		# print("constraints\n", constraints)
+		# print("variables\n", variables)
+		# print_model(self._model)
 		current_var = ordered_ll.head
 		constraints_copy = {i: constraints[i].copy() for i in constraints}
 
