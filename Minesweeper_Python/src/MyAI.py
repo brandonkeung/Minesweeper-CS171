@@ -18,6 +18,7 @@ import random
 from queue import Queue
 from datetime import datetime
 from collections import defaultdict
+import time
 
 LEAVE = 0
 UNCOVER = 1
@@ -41,6 +42,8 @@ class MyAI( AI ):
 		self._moveCount = 0
 		self._uncovered_tiles = 1
 		self._safe_spaces = colDimension*rowDimension - totalMines
+
+		self._mines_found = 0
 
 		self._model =  [[]]
 		self._create_model()
@@ -66,35 +69,28 @@ class MyAI( AI ):
 		self._uncovered_frontier = set()   # tiles that have been uncovered but not solved..
 
 	def getAction(self, number: int) -> "Action Object":
-		#print("action")
 		# print("\nBEFORE ACTION")
 		# print("Uncovered Frontier", self._uncovered_frontier)
 		# print("Covered Marked Frontier", self._covered_unmarked_frontier)
 		# print("Known Actions", self.actions_to_execute)
 		# print_model(self._model)
-		# # print("MOVE COUNT:", self._moveCount)
-		# # print("SIZE OF QUEUE", self.action_queue.qsize())
-		# # print("NUM VISITED", len(self._visited))
-		
-		
 
 		if self._uncover[0]:  # if our previous action was uncover, update the board based on 'number'
-			# print("MEOW")
 			x, y = self._uncover[1]
 			current_tile = self._model[y][x]
 			current_tile.label = number
 			current_tile.effective_label = number
 			self._update_model(x, y, current_tile.label)
 
-			# print("NEW TILE UNLOCKED: ", x, y, number)
-			# print_model(self._model)
+		#	print("NEW TILE UNLOCKED: ", x, y, number)
+			#print_model(self._model)
 			self._uncover = (False, (-1, -1))
 			
 			# check how model changed the neighbors
 			neighbors = self.generate_neighbors(x, y)
 			for i in neighbors:
 				if current_tile.effective_label == 0 and self._model[i[1]][i[0]].label == "*" :  # if the number is 0, add the neighbors into the queue since there isn't a bomb around it
-					# print("\tadding uncover at ({}, {})".format(i[0],i[1]))
+				#	print("\tadding uncover at ({}, {})".format(i[0],i[1]))
 					self.actions_to_execute.add((i, UNCOVER))
 					self.remove_covered_unmarked_neighbors(i)
 					continue
@@ -103,7 +99,7 @@ class MyAI( AI ):
 					## print(self._covered_unmarked_frontier)
 					for cu in self._covered_unmarked_frontier.copy():
 						if is_neighbor(cu, i) and self._model[cu[1]][cu[0]] == "*":
-							# print("\tadding flag at ({}, {})".format(cu[0], cu[1]))
+						#	print("\tadding flag at ({}, {})".format(cu[0], cu[1]))
 							self.actions_to_execute.add((cu, FLAG))
 							self.remove_covered_unmarked_neighbors(cu)
 
@@ -144,16 +140,15 @@ class MyAI( AI ):
 		#poop = True
 		if len(self.actions_to_execute) == 0 and self._uncovered_tiles != self._safe_spaces:# and self.poop:
 			#backtrack
+			#print(len(self._uncovered_frontier), len(self._covered_unmarked_frontier))
+			##REMOVE
+		#	if not( len(self._uncovered_frontier) > 25 and len(self._covered_unmarked_frontier) > 40):
+
 			self.poop = False
 		#	print("BACKTRACK")
 			potential_assignments = self.backtracking_search()
-			# print("potential assignments\n", potential_assignments)
-			# print("POOOP", len(potential_assignments))
-
 			self.assess_potential_assignments(potential_assignments)
-			# print(len(self.actions_to_execute))
-			#x = [{(2, 4): [M, None, 7], (3, 4): [Not Mine, None, 5], (4, 3): [Not Mine, None, 6], (3, 7): [Not Mine, None, 3], (7, 3): [Not Mine, None, 4], (7, 6): [M, None, 1], (2, 5): [Not Mine, None, 7], (7, 4): [Not Mine, None, 2], (7, 7): [Not Mine, None, 1], (3, 3): [M, None, 7], (2, 6): [Not Mine, None, 7], (3, 6): [M, None, 4], (5, 3): [M, None, 5], (6, 3): [Not Mine, None, 6]}]
-			
+
 			# TO IMPLEMENT: get best moves based on backtracking search
 			# for coord, tile in potential_assignments[0].items():
 			# 	if tile.label == "M":
@@ -164,24 +159,40 @@ class MyAI( AI ):
 		if (len(self.actions_to_execute) != 0):   #if our action queue is not empty, do actions
 
 			coord, action = self.actions_to_execute.pop()
+			#print("ACTION TO EXECUTE", coord, action)
 			x, y = coord
+
+			while len(self.actions_to_execute) > 0 and self._model[y][x].label != "*":  # before having an action, this ensures the spot is empty
+				coord, action = self.actions_to_execute.pop()
+				#print("ACTION TO EXECUTE", coord, action)
+				x, y = coord	
 			if action == UNCOVER:
 				self._uncover = (True, (x, y))
 				self._moveCount += 1
 				self._uncovered_tiles += 1
 				
 				# print("UNCOVER AT: ", x, y)
+				self.remove_covered_unmarked_neighbors((x,y))
 				return Action(AI.Action(UNCOVER), x, y)
 			elif action == FLAG:
 				self._moveCount += 1
-
 
 				# update board for flag
 				self._model[y][x].label = "M"
 				self._update_model(x, y, "M")
 
+				# if self._model[y][x].unvisited_neighbors != 0:
+				# 	self._uncovered_frontier.add((x,y))
+
+				#update covered neigbors
+				# bomb_neighbors = self.generate_neighbors(x, y)
+				# for n in bomb_neighbors:
+				# 	self.append_covered_unmarked_neighbors(n)
+
 				# print_model(self._model)
 				# print("FLAG ACTION: ", x, y)
+				self.remove_covered_unmarked_neighbors((x,y))
+				self._mines_found += 1
 				return Action(AI.Action(FLAG), x, y)
 							
 		if self._uncovered_tiles == self._safe_spaces:  # we won the game
@@ -189,8 +200,11 @@ class MyAI( AI ):
 			return Action(AI.Action(LEAVE))
 		
 		## print(self._uncovered_tiles, self._safe_spaces)
-
+		print(self._uncovered_frontier)
+		print(self._covered_unmarked_frontier)
 		print("Leaving...")
+		print("MINES", self._mines_found)
+		print_model(self._model)
 		# # print("Uncovered Frontier", self._uncovered_frontier)
 		# # print("Covered Marked Frontier", self._covered_unmarked_frontier)
 		# # print("Known Actions", self.actions_to_execute)
@@ -286,7 +300,8 @@ class MyAI( AI ):
 	def backtracking_search(self):
 		# 1. order variables in V (covered_unmarked_frontier)
 		# -----> ordering by num of unvisitied neighbors
-		print("in backtracking")
+		print("IN BACKTRACKING")
+		#print_model(self._model)
 		if len(self._covered_unmarked_frontier) == 0 or len(self._uncovered_frontier) == 0:
 			return
 
@@ -298,20 +313,34 @@ class MyAI( AI ):
 
 		ordered_variables = sorted(ordered,key= lambda x:x[0], reverse=True)
 
-		# print("Ordered Variables\n", ordered_variables)
+		#print("Ordered Variables\n", ordered_variables)
 		ordered_ll = create_assignment_LL(ordered_variables)
 		constraints = {i: self._model[i[1]][i[0]].copy() for i in self._uncovered_frontier}
 		variables = {i: self._model[i[1]][i[0]].copy() for i in self._covered_unmarked_frontier}
 
-		# print("constraints\n", constraints)
-		# print("variables\n", variables)
-		
+		print("constraints\n", constraints)
+		print("variables\n", variables)
+		print_model(self._model)
 		current_var = ordered_ll.head
 		constraints_copy = {i: constraints[i].copy() for i in constraints}
 
 		full_complete_assignments = list()
+		first_var = ordered_ll.head
+		start_time = time.time()
+	#	print(len(variables))
 		while True:
+			#print(ordered_ll.head.value, ordered_ll.head.key)
+			#print(current_var.key, current_var.value)
+			if time.time() - start_time > 120:
+				print("TIMEOUT")
+				break
+			
 			# print("VAR CURRENTLY ON:", current_var.key, current_var.value)
+			if current_var and current_var == first_var and current_var.value and len(current_var.value) == 2:
+				print("none")
+				break
+
+			
 			if current_var and current_var.value == None:
 				current_var.value = {"Mine"}
 				is_valid, updated_constraints = self._check_update_constraints(current_var.key, "M", constraints_copy)
@@ -323,11 +352,13 @@ class MyAI( AI ):
 					# print("\tupdated constraints\n\t", constraints_copy)
 					if current_var.next:
 						current_var = current_var.next
+					
 					## print(current_var.key, "is a Mine")
 					#continue
 				else:
 					variables[current_var.key].label = "*"
 				continue
+			
 			if current_var and len(current_var.value) == 1:  # this means we've tried mine on it already so now we try no mine
 				# print(current_var.value, variables[current_var.key].label)
 				if variables[current_var.key].label != "*": #this means we're coming from a backtrack since it's been previously assigned
@@ -351,9 +382,9 @@ class MyAI( AI ):
 					variables[current_var.key].label = "*"
 				continue
 			if current_var and current_var.next == None and variables[current_var.key].label != "*": # this means we've reached a complete assignment
-				# print("FULL ASSIGNMENT")
+				#print("FULL ASSIGNMENT")
 				# print("\t", variables[(2,4)])
-				# print(variables)
+				#print(variables)
 				full_complete_assignments.append({i: variables[i].copy() for i in variables})
 				# print(full_complete_assignments)
 				# if len(full_complete_assignments) == 2:
@@ -382,7 +413,8 @@ class MyAI( AI ):
 			if current_var and current_var.prev == None:
 				break
 		#	break
-
+		
+	#	print(full_complete_assignments)
 		return full_complete_assignments
 		# for covered in ordered_variables:
 		# 	variables[covered].label = "M"
@@ -441,6 +473,7 @@ class MyAI( AI ):
 		# # print("UN", uncovered_neighbors)
 		# # print("CN", covered_neighbors)
 		# 1-1-x
+		found_actions = False
 		if tile.unvisited_neighbors == 2:
 			for coordUN in uncovered_neighbors:
 				un_x, un_y = coordUN  # un = uncovered neighbor
@@ -457,12 +490,30 @@ class MyAI( AI ):
 							potential_uncover_tile = self._model[r[1]][r[0]]
 							if potential_uncover_tile.label == "*":
 								self.actions_to_execute.add(((r), UNCOVER))
+								found_actions = True
 								self.remove_covered_unmarked_neighbors(r)
 							# print(r)
 						# now get the neighbors of this one from covered unmarked frontier and whichever ones they don't have in common can't be bombs
 
 					 # if neighbor is right next to us and has unvisited > 3
-
+		# 1-2-x
+		if not found_actions and tile.effective_label == 1 and tile.unvisited_neighbors in (2, 3):
+			for uncovered_coord in uncovered_neighbors:
+				un_x, un_y = uncovered_coord
+				if (un_x == x and abs(un_y - y) == 1) or (abs(un_x - x) == 1 and un_y == y): # if neighbor is right next to us
+					neighbor_tile = self._model[un_y][un_x]
+					if neighbor_tile.effective_label == 2 and neighbor_tile.unvisited_neighbors == 3:
+						covered_neighbors2 = self._get_covered_unmarked_neighbors(uncovered_coord)
+						# print("CN2", covered_neighbors2)
+						for r in covered_neighbors2.difference(covered_neighbors):
+							# print("Adding uncover...")
+							####################################
+							#shouldn't need if covered_unmarked is correct
+							potential_bomb_tile = self._model[r[1]][r[0]]
+							if potential_bomb_tile.label == "*":
+								self.actions_to_execute.add(((r), FLAG))
+								found_actions = True
+								self.remove_covered_unmarked_neighbors(r)
 	
 	def _get_covered_unmarked_neighbors(self, coord) -> set:
 	#	# print("r",self._covered_unmarked_frontier)
@@ -511,12 +562,12 @@ class MyAI( AI ):
 			if k == (2,6):
 				continue
 			if result[k] == total_assignments:
-				# print("adding flag at ", k)
+				#print("adding flag at ", k)
 				
 				self.actions_to_execute.add((k, FLAG))
 				self.remove_covered_unmarked_neighbors(k)
 			elif result[k] == 0:
-				# print("adding uncover at", k)
+				#print("adding uncover at", k)
 				self.actions_to_execute.add((k, UNCOVER))
 				self.remove_covered_unmarked_neighbors(k)
 
@@ -561,20 +612,26 @@ def print_model(model):
 
 # run with  python Main.py -f .\Problems\Easy_world_1.txt for one world
 # run with  python Main.py -f .\Problems\ for all worlds
-# run with  python Main.py -f .\ProblemsBeginner\  # 578
-# run with  python Main.py -f .\ProblemsIntermediate\ # 65
+# run with  python Main.py -f .\ProblemsBeginner\  # 734
+# run with  python Main.py -f .\ProblemsIntermediate\ # 686
+# run with  python Main.py -f .\ProblemsExpertSmall\Expert_world_1.txt # 16
 # python Main.py -f .\ProblemsBeginner\Beginner_world_1.txt
 # python Main.py -f .\ProblemsIntermediate\Intermediate_world_1.txt
-# python Main.py -f .\ProblemsExpertSmall
+# python Main.py -f /home/bsteier/Minesweeper-CS171/Minesweeper_Python/src/ProblemsExpertSmall/Expert_world_1.txt
 
 # in openlab
 # python3 Main.pyc -f /home/bsteier/Minesweeper-CS171/Minesweeper_Python/src/ProblemsIntermediate
 # run with  python3 Main.pyc -f ./Problems/ #1000
-# run with  python3 Main.py -f ./ProblemsBeginner/ # 581
-# run with  python3 Main.py -f ./ProblemsIntermediate/ # 458
+# run with  python3 Main.py -f ./ProblemsBeginner/ # 736
+# run with  python3 Main.py -f ./ProblemsIntermediate/ # 673
 # python3 Main.pyc -f /home/bsteier/Minesweeper-CS171/Minesweeper_Python/src/ProblemsExpert
+# python3 Main.py -f /home/bsteier/Minesweeper-CS171/Minesweeper_Python/src/ProblemsExpertSmall/  16
+# python3 Main.py -f /home/bsteier/Minesweeper-CS171/Minesweeper_Python/src/ProblemsExpertSmall/Expert_world_1.txt
 
 # python3 Main.pyc -f /home/bsteier/Minesweeper-CS171/Minesweeper_Python/src/ProblemsExpert/Expert_world_1.txt
+
+# current failed world
+# python Main.py -f .\ProblemsIntermediate\Intermediate_world_2.txt   <- fix by creating an if block to check when we need to randomly guess
 
 class Tile():
 	def __init__(self, label, effective_label, unvisited_neighbors) -> None:
@@ -619,4 +676,3 @@ def create_assignment_LL(ordered: list) -> LinkedList:
 		
 	printLL(result)
 	return result
-
